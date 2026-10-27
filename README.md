@@ -1,6 +1,12 @@
 # nfl-edge
 
+[![CI](https://github.com/morganzietz/nfl-stats/actions/workflows/ci.yml/badge.svg)](https://github.com/morganzietz/nfl-stats/actions/workflows/ci.yml)
+![Python 3.12](https://img.shields.io/badge/python-3.12-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 An NFL point-spread model benchmarked honestly against the closing Vegas line.
+
+**Stack:** Python 3.12, polars, pandas, scikit-learn, LightGBM, Typer, pytest, GitHub Actions.
 
 The question this project answers is the hard one: **can a model built from public
 play-by-play data beat the market?** Every prediction is made walk-forward (train on prior
@@ -88,6 +94,40 @@ pytest                                       # leakage and grading tests
 
 Backtest predictions are written to `reports/preds_<model>_<features>.csv` for further analysis.
 
+Sample output from `nfl-edge backtest --model ridge`:
+
+```
+                 Flat-stake ATS by edge threshold
+ threshold   bets   wins  losses  pushes  win_rate    roi   units      p
+       0.0   3892   1947    1847      98     51.3%  -0.3%    -9.8   0.91
+       1.0   2907   1454    1379      74     51.3%  -0.2%    -6.2   0.87
+       2.0   2015   1018     941      56     52.0%  +0.9%   +18.5   0.64
+       3.0   1334    678     618      38     52.3%  +1.6%   +21.2   0.52
+       4.0    798    399     382      17     51.1%  -0.8%    -6.3   0.77
+
+                 Cover rate by |edge| bucket
+   bucket   bets  cover_rate     roi
+   [0, 1)    961       51.3%   -0.4%
+   [1, 2)    874       49.9%   -2.8%
+   [2, 3)    663       51.3%   -0.4%
+   [3, 4)    515       54.2%   +5.3%
+   [4, 6)    505       50.3%   -2.1%
+ [6, 100)    276       52.5%   +1.6%
+```
+
+## Project structure
+
+```
+src/nfl_edge/
+  config.py     seasons, Elo and EWMA parameters, betting thresholds
+  data.py       download nflverse schedules and play-by-play to parquet
+  features.py   team-game box scores, shifted EWMA form, Elo, game feature matrix
+  model.py      Ridge / LightGBM and the season-by-season walk-forward loop
+  backtest.py   bet grading, ROI, z-test vs breakeven, calibration by edge
+  cli.py        `nfl-edge` command line entry point
+tests/          leakage, Elo, and bet-grading tests
+```
+
 ## Data
 
 All data comes from [nflverse](https://github.com/nflverse) via `nflreadpy`. Schedules include
@@ -107,4 +147,3 @@ In rough order of expected value:
 3. **Opening lines and closing line value.** nflverse has only closing lines. Pulling opening
    lines from The Odds API would let the model be judged on CLV, the standard professional metric.
 4. **Totals model.** The same pipeline predicts points scored; the totals market is thinner.
-5. **Deploy.** Ship the Next.js site and API so the picks board is public.
